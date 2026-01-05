@@ -193,27 +193,31 @@ REGISTER_USER PROC
     MOV AH, 0AH
     INT 21H
     
-    ; Copy from buffer to current_nid (skip first 2 bytes: length and actual length)
+    ; Copy from buffer to current_nid
+    ; Buffer format: [max_len][actual_len][data...][CR]
     LEA SI, nid_buffer
-    INC SI  ; Skip max length byte
-    MOV CL, [SI]  ; Get actual length
+    INC SI  ; Skip max length byte (buffer[0])
+    MOV CL, [SI]  ; Get actual length (buffer[1])
     MOV CH, 0
-    INC SI  ; Point to actual data
+    INC SI  ; Point to actual data (buffer[2])
     LEA DI, current_nid
     
-    ; Copy the NID
+    ; Copy exactly the number of characters specified by length
     CMP CX, 0
     JE NID_COPY_DONE
+    CMP CX, 10  ; Safety: limit to 10 characters
+    JLE COPY_NID_OK
+    MOV CX, 10  ; Cap at 10
+COPY_NID_OK:
 COPY_NID:
     MOV AL, [SI]
-    CMP AL, 0DH  ; Skip carriage return if present
-    JE NID_COPY_DONE
     MOV [DI], AL
     INC SI
     INC DI
     LOOP COPY_NID
 NID_COPY_DONE:
-    MOV BYTE PTR [DI], '$'  ; Dollar sign terminator for INT 21h function 09h
+    ; CRITICAL: Add '$' terminator for INT 21h function 09h
+    MOV BYTE PTR [DI], '$'
     
     ; Get Fingerprint Password using buffered input
     LEA DX, msg_fingerprint
@@ -255,10 +259,12 @@ FP_COPY_DONE:
     MOV AH, 09H
     INT 21H
     
+    ; Display the NID (ensure it's properly terminated with '$')
     LEA DX, current_nid
     MOV AH, 09H
     INT 21H
     
+    ; Add newline for better formatting
     LEA DX, msg_newline
     MOV AH, 09H
     INT 21H
