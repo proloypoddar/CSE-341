@@ -206,12 +206,14 @@ REGISTER_USER PROC
     JE NID_COPY_DONE
 COPY_NID:
     MOV AL, [SI]
+    CMP AL, 0DH  ; Skip carriage return if present
+    JE NID_COPY_DONE
     MOV [DI], AL
     INC SI
     INC DI
     LOOP COPY_NID
 NID_COPY_DONE:
-    MOV BYTE PTR [DI], 0  ; Null terminator
+    MOV BYTE PTR [DI], '$'  ; Dollar sign terminator for INT 21h function 09h
     
     ; Get Fingerprint Password using buffered input
     LEA DX, msg_fingerprint
