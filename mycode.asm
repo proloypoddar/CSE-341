@@ -341,9 +341,13 @@ CONVERT_TO_NUMBER:
     LOOP CONVERT_TO_NUMBER
     
     ; Build full SIM number: 017XXXX = 170000 + XXXX
-    MOV AX, 170000
+    ; 170000 = 0x29810, which is > 65535, so we need 32-bit
+    ; 170000 = 2 * 65536 + 38928 = 131072 + 38928
+    MOV AX, 38928  ; Low 16 bits of 170000 (170000 mod 65536)
+    MOV DX, 2      ; High 16 bits (170000 / 65536 = 2)
+    ; Add BX (0-9999) to AX, no carry since 38928 + 9999 = 48927 < 65536
     ADD AX, BX
-    MOV DX, 0  ; High word is 0 for numbers < 65536
+    ; Result is now in DX:AX (32-bit)
     
     ; Check if this number already exists in user's SIMs
     CALL CHECK_NUMBER_EXISTS
